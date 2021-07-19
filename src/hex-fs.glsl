@@ -4,7 +4,7 @@ out vec4 frag;
 
 uniform vec3 model_color;
 
-const vec4 border_color = vec4(0.0, 0.0, 0.0, 0.0);
+const vec4 border_color = vec4(1.0, 1.0, 1.0, 1.0);
 
 void main() {
   vec4 hex_color = vec4(model_color, 1.0);

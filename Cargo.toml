@@ -11,6 +11,7 @@ luminance = "0.44.0"
 luminance-derive = "0.7.0"
 luminance-front = "0.4.0"
 luminance-glutin = "0.12.0"
+luminance-glyph = { git = "https://github.com/paavohuhtala/luminance-glyph", branch = "luminance-0.44" }
 luminance-windowing = "0.10.0"
 num-traits = "0.2.14"
 rand = "0.8.4"

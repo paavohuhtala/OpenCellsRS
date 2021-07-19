@@ -3,6 +3,16 @@
 version = 3
 
 [[package]]
+name = "ab_glyph"
+version = "0.2.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af0ac006645f86f20f6c6fa4dcaef920bf803df819123626f9440e35835e7d80"
+dependencies = [
+ "ab_glyph_rasterizer",
+ "owned_ttf_parser 0.12.1",
+]
+
+[[package]]
 name = "ab_glyph_rasterizer"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -32,6 +42,15 @@ name = "approx"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "approx"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "072df7202e63b127ab55acfe16ce97013d5b97bf160489336d3f1840fd78e99e"
 dependencies = [
  "num-traits",
 ]
@@ -124,7 +143,7 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a98d30140e3296250832bbaaff83b27dcd6fa3cc70fb6f1f3e5c9c0023b5317"
 dependencies = [
- "approx",
+ "approx 0.4.0",
  "num-traits",
 ]
 
@@ -423,13 +442,24 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 
 [[package]]
 name = "getrandom"
+version = "0.1.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8fc3cb4d91f53b50155bdcfd23f6a4c39ae1969c2ae85982b135750cccaf5fce"
+dependencies = [
+ "cfg-if 1.0.0",
+ "libc",
+ "wasi 0.9.0+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "getrandom"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fcd999463524c52659517fe2cea98493cfe485d10565e7b0fb07dbba7ad2753"
 dependencies = [
  "cfg-if 1.0.0",
  "libc",
- "wasi",
+ "wasi 0.10.2+wasi-snapshot-preview1",
 ]
 
 [[package]]
@@ -522,6 +552,45 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3da5951a1569dbab865c6f2a863efafff193a93caf05538d193e9e3816d21696"
 dependencies = [
  "gl_generator",
+]
+
+[[package]]
+name = "glyph_brush"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e3f00b8574a76fb6c50890c48da03946ca50e4372a2778737922666a2238221"
+dependencies = [
+ "glyph_brush_draw_cache",
+ "glyph_brush_layout",
+ "log",
+ "ordered-float",
+ "rustc-hash",
+ "twox-hash",
+]
+
+[[package]]
+name = "glyph_brush_draw_cache"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac2c82074cafb68b9e459c50c655f7eedcb92d6ee7166813802934bc6fc29fa3"
+dependencies = [
+ "ab_glyph",
+ "crossbeam-channel",
+ "crossbeam-deque",
+ "linked-hash-map",
+ "rayon",
+ "rustc-hash",
+]
+
+[[package]]
+name = "glyph_brush_layout"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cc32c2334f00ca5ac3695c5009ae35da21da8c62d255b5b96d56e2597a637a38"
+dependencies = [
+ "ab_glyph",
+ "approx 0.5.0",
+ "xi-unicode",
 ]
 
 [[package]]
@@ -646,6 +715,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "linked-hash-map"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
+
+[[package]]
 name = "lock_api"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -715,6 +790,16 @@ dependencies = [
  "luminance",
  "luminance-gl",
  "luminance-windowing",
+]
+
+[[package]]
+name = "luminance-glyph"
+version = "0.2.0"
+source = "git+https://github.com/paavohuhtala/luminance-glyph?branch=luminance-0.44#b5e41ce8e09e96656887dfdee1a8b3c6488ca0cd"
+dependencies = [
+ "glyph_brush",
+ "log",
+ "luminance",
 ]
 
 [[package]]
@@ -968,10 +1053,20 @@ dependencies = [
  "luminance-derive",
  "luminance-front",
  "luminance-glutin",
+ "luminance-glyph",
  "luminance-windowing",
  "num-traits",
- "rand",
+ "rand 0.8.4",
  "rayon",
+]
+
+[[package]]
+name = "ordered-float"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "039f02eb0f69271f26abe3202189275d7aa2258b903cb0281b5de710a2570ff3"
+dependencies = [
+ "num-traits",
 ]
 
 [[package]]
@@ -989,7 +1084,16 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f923fb806c46266c02ab4a5b239735c144bdeda724a50ed058e5226f594cde3"
 dependencies = [
- "ttf-parser",
+ "ttf-parser 0.6.2",
+]
+
+[[package]]
+name = "owned_ttf_parser"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "60ac8dda2e5cc09bf6480e3b3feff9783db251710c922ae9369a429c51efdeb0"
+dependencies = [
+ "ttf-parser 0.12.3",
 ]
 
 [[package]]
@@ -1080,14 +1184,37 @@ dependencies = [
 
 [[package]]
 name = "rand"
+version = "0.7.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a6b1679d49b24bbfe0c803429aa1874472f50d9b363131f0e89fc356b544d03"
+dependencies = [
+ "getrandom 0.1.16",
+ "libc",
+ "rand_chacha 0.2.2",
+ "rand_core 0.5.1",
+ "rand_hc 0.2.0",
+]
+
+[[package]]
+name = "rand"
 version = "0.8.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e7573632e6454cf6b99d7aac4ccca54be06da05aca2ef7423d22d27d4d4bcd8"
 dependencies = [
  "libc",
- "rand_chacha",
- "rand_core",
- "rand_hc",
+ "rand_chacha 0.3.1",
+ "rand_core 0.6.3",
+ "rand_hc 0.3.1",
+]
+
+[[package]]
+name = "rand_chacha"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4c8ed856279c9737206bf725bf36935d8666ead7aa69b52be55af369d193402"
+dependencies = [
+ "ppv-lite86",
+ "rand_core 0.5.1",
 ]
 
 [[package]]
@@ -1097,7 +1224,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6c10a63a0fa32252be49d21e7709d4d4baf8d231c2dbce1eaa8141b9b127d88"
 dependencies = [
  "ppv-lite86",
- "rand_core",
+ "rand_core 0.6.3",
+]
+
+[[package]]
+name = "rand_core"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90bde5296fc891b0cef12a6d03ddccc162ce7b2aff54160af9338f8d40df6d19"
+dependencies = [
+ "getrandom 0.1.16",
 ]
 
 [[package]]
@@ -1106,7 +1242,16 @@ version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d34f1408f55294453790c48b2f1ebbb1c5b4b7563eb1f418bcfcfdbb06ebb4e7"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.3",
+]
+
+[[package]]
+name = "rand_hc"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ca3129af7b92a17112d59ad498c6f81eaf463253766b90396d39ea7a39d6613c"
+dependencies = [
+ "rand_core 0.5.1",
 ]
 
 [[package]]
@@ -1115,7 +1260,7 @@ version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d51e9f596de227fda2ea6c84607f5558e196eeaf43c986b724ba4fb8fdf497e7"
 dependencies = [
- "rand_core",
+ "rand_core 0.6.3",
 ]
 
 [[package]]
@@ -1162,13 +1307,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
 name = "rusttype"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc7c727aded0be18c5b80c1640eae0ac8e396abf6fa8477d96cb37d18ee5ec59"
 dependencies = [
  "ab_glyph_rasterizer",
- "owned_ttf_parser",
+ "owned_ttf_parser 0.6.0",
 ]
 
 [[package]]
@@ -1254,6 +1405,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
 name = "strsim"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1306,6 +1463,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3e5d7cd7ab3e47dda6e56542f4bbf3824c15234958c6e1bd6aaa347e93499fdc"
 
 [[package]]
+name = "ttf-parser"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7ae2f58a822f08abdaf668897e96a5656fe72f5a9ce66422423e8849384872e6"
+
+[[package]]
+name = "twox-hash"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04f8ab788026715fa63b31960869617cba39117e520eb415b0139543e325ab59"
+dependencies = [
+ "cfg-if 0.1.10",
+ "rand 0.7.3",
+ "static_assertions",
+]
+
+[[package]]
 name = "unicode-xid"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1317,7 +1491,7 @@ version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
 dependencies = [
- "getrandom",
+ "getrandom 0.2.3",
  "serde",
 ]
 
@@ -1337,6 +1511,12 @@ dependencies = [
  "winapi",
  "winapi-util",
 ]
+
+[[package]]
+name = "wasi"
+version = "0.9.0+wasi-snapshot-preview1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cccddf32554fecc6acb585f82a32a72e28b48f8c4c1883ddfeeeaa96f7d8e519"
 
 [[package]]
 name = "wasi"
@@ -1580,6 +1760,12 @@ name = "xdg"
 version = "2.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d089681aa106a86fade1b0128fb5daf07d5867a509ab036d99988dec80429a57"
+
+[[package]]
+name = "xi-unicode"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a67300977d3dc3f8034dae89778f502b6ba20b269527b3223ba59c0cf393bb8a"
 
 [[package]]
 name = "xml-rs"

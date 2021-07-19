@@ -1,9 +1,10 @@
 mod hexagon;
+mod level;
 mod render;
 
-use std::collections::HashSet;
+use std::collections::HashMap;
 
-use cgmath::{Matrix4, Ortho, Vector2, Vector3, Zero};
+use cgmath::{Deg, Matrix4, Ortho, Vector2, Vector3, Zero};
 use glutin::{
     self,
     dpi::LogicalSize,
@@ -11,9 +12,12 @@ use glutin::{
     event_loop::ControlFlow,
     window::WindowBuilder,
 };
-use luminance::{context::GraphicsContext, pipeline::PipelineState, render_state::RenderState};
+use level::Hex;
+use luminance_front::{
+    context::GraphicsContext, pipeline::PipelineState, render_state::RenderState,
+};
 use luminance_glutin::{self, GlutinSurface};
-use rand::Rng;
+use luminance_glyph::{ab_glyph::FontArc, GlyphBrushBuilder, Section, Text};
 use render::{HexInterface, HexVertexSemantics};
 
 use crate::hexagon::{create_hexagon_mesh_border, flat_hex_to_pixel, pixel_to_flat_hex};
@@ -36,7 +40,7 @@ fn main() {
     let window_builder = WindowBuilder::new()
         .with_title("OpenCells")
         .with_inner_size(LogicalSize::new(1600.0, 900.0));
-    let (mut surface, event_loop) = GlutinSurface::new_gl33(window_builder, 1).unwrap();
+    let (mut surface, event_loop) = GlutinSurface::new_gl33(window_builder, 8).unwrap();
 
     let mut program = surface
         .new_shader_program::<HexVertexSemantics, (), HexInterface>()
@@ -49,21 +53,25 @@ fn main() {
     let mut projection = get_projection_matrix(1600.0, 900.0);
     let scale = 64.0;
 
-    let colors = rand::random::<[[f32; 3]; 32]>();
-
     let offset: Vector2<f32> = Vector2::new(160.0, 160.0);
 
-    let hexes_len = rand::thread_rng().gen_range(0..32);
+    let mut glyph_brush = GlyphBrushBuilder::using_font(
+        FontArc::try_from_slice(include_bytes!("../assets/fonts/Aileron-Regular.otf")).unwrap(),
+    )
+    .build(&mut surface);
 
-    let mut positions = (0..hexes_len)
-        .map(|_| {
-            let x = rand::thread_rng().gen_range(-1..8);
-            let y = rand::thread_rng().gen_range(-1..8);
-            Vector2::new(x, y)
-        })
-        .collect::<HashSet<_>>();
+    glyph_brush.queue(
+        Section::default().add_text(
+            Text::new("{3}")
+                .with_color([1.0, 1.0, 1.0, 1.0])
+                .with_scale(24.0),
+        ),
+    );
 
-    let mut active_hex = Vector2::zero();
+    glyph_brush.process_queued(&mut surface);
+
+    let mut hexes = HashMap::new();
+    let mut hex_under_cursor = Vector2::zero();
 
     event_loop.run(move |event, _, control_flow| {
         *control_flow = ControlFlow::Poll;
@@ -83,17 +91,30 @@ fn main() {
                 WindowEvent::CursorMoved { position, .. } => {
                     let relative_pos = Vector2::new(position.x as f32, position.y as f32) - offset;
                     let hex = pixel_to_flat_hex(relative_pos, scale);
-                    active_hex = hex;
+                    hex_under_cursor = hex;
                 }
                 WindowEvent::MouseInput {
-                    button: MouseButton::Left,
+                    button: button @ (MouseButton::Left | MouseButton::Right),
                     state: ElementState::Pressed,
                     ..
                 } => {
-                    if positions.contains(&active_hex) {
-                        positions.remove(&active_hex);
+                    if hexes.contains_key(&hex_under_cursor) {
+                        hexes.remove(&hex_under_cursor);
                     } else {
-                        positions.insert(active_hex);
+                        match button {
+                            MouseButton::Left => {
+                                hexes.insert(hex_under_cursor, Hex::Marked { show_around: false });
+                            }
+                            MouseButton::Right => {
+                                hexes.insert(
+                                    hex_under_cursor,
+                                    Hex::Empty {
+                                        show_neighbor_count: true,
+                                    },
+                                );
+                            }
+                            _ => unreachable!(),
+                        }
                     }
                 }
                 _ => (),
@@ -109,35 +130,50 @@ fn main() {
                     .pipeline(
                         &back_buffer,
                         &PipelineState::default().set_clear_color([0.1, 0.1, 0.1, 1.0]),
-                        |_, mut shd_gate| {
+                        |mut pipeline, mut shd_gate| {
+                            let text_transform = projection * Matrix4::from_angle_z(Deg(60.0));
+                            let text_transform_16: &[f32; 16] = text_transform.as_ref();
+
+                            glyph_brush
+                                .draw_queued_with_transform(
+                                    &mut pipeline,
+                                    &mut shd_gate,
+                                    text_transform_16.clone(),
+                                )
+                                .expect("failed to render glyphs");
+
                             shd_gate.shade(&mut program, |mut iface, uni, mut rdr_gate| {
-                                for (i, position) in positions.iter().enumerate() {
-                                    let offset = Vector3::new(offset.x, offset.y, 0.0);
-                                    let relative_position = flat_hex_to_pixel(*position, scale);
+                                rdr_gate.render(&RenderState::default(), |mut tess_gate| {
+                                    for (position, hex) in &hexes {
+                                        let offset = Vector3::new(offset.x, offset.y, 0.0);
+                                        let relative_position = flat_hex_to_pixel(*position, scale);
 
-                                    let translation = Matrix4::from_translation(
-                                        offset + relative_position.extend(0.0),
-                                    );
+                                        let translation = Matrix4::from_translation(
+                                            offset + relative_position.extend(0.0),
+                                        );
 
-                                    let scale = Matrix4::from_scale(scale);
+                                        let scale = Matrix4::from_scale(scale);
 
-                                    let view = projection * translation * scale;
-                                    iface.set(&uni.view, view.into());
+                                        let view = projection * translation * scale;
+                                        iface.set(&uni.view, view.into());
 
-                                    let color = Vector3::from(colors[i % colors.len()])
-                                        * (if active_hex == *position { 1.5 } else { 1.0 });
+                                        let color = hex.get_color(false)
+                                            * (if hex_under_cursor == *position {
+                                                1.5
+                                            } else {
+                                                1.0
+                                            });
 
-                                    iface.set(&uni.model_color, color.into());
+                                        iface.set(&uni.model_color, color.into());
 
-                                    rdr_gate
-                                        .render(&RenderState::default(), |mut tess_gate| {
-                                            tess_gate.render(&mesh)
-                                        })
-                                        .map_err(|_: &'static str| ())
-                                        .unwrap();
-                                }
+                                        tess_gate
+                                            .render(&mesh)
+                                            .map_err(|_e: &'static str| ())
+                                            .unwrap();
+                                    }
 
-                                Ok(())
+                                    Ok(())
+                                })
                             })
                         },
                     )
