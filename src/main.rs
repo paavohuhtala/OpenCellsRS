@@ -4,11 +4,11 @@ mod render;
 
 use std::collections::HashMap;
 
-use cgmath::{Deg, Matrix4, Ortho, Vector2, Vector3, Zero};
+use cgmath::{Matrix4, Ortho, Vector2, Vector3, Zero};
 use glutin::{
     self,
     dpi::LogicalSize,
-    event::{ElementState, Event, MouseButton, StartCause, WindowEvent},
+    event::{Event, StartCause, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
     window::WindowBuilder,
 };
@@ -17,10 +17,15 @@ use luminance_front::{
     context::GraphicsContext, pipeline::PipelineState, render_state::RenderState,
 };
 use luminance_glutin::{self, GlutinSurface};
-use luminance_glyph::{ab_glyph::FontArc, GlyphBrushBuilder, Section, Text};
+use luminance_glyph::{
+    ab_glyph::FontArc, GlyphBrushBuilder, HorizontalAlign, Layout, Section, Text, VerticalAlign,
+};
 use render::{HexInterface, HexVertexSemantics};
 
-use crate::hexagon::{create_hexagon_mesh_border, flat_hex_to_pixel, pixel_to_flat_hex};
+use crate::hexagon::{
+    create_hexagon_mesh_border, flat_hex_height, flat_hex_to_pixel, flat_hex_width,
+    pixel_to_flat_hex,
+};
 
 const VS: &'static str = include_str!("hex-vs.glsl");
 const FS: &'static str = include_str!("hex-fs.glsl");
@@ -31,7 +36,7 @@ fn get_projection_matrix(width: f32, height: f32) -> Matrix4<f32> {
         right: width,
         bottom: height,
         top: 0.0,
-        near: -0.01,
+        near: -2.0,
         far: 100.0,
     })
 }
@@ -53,22 +58,13 @@ fn main() {
     let mut projection = get_projection_matrix(1600.0, 900.0);
     let scale = 64.0;
 
-    let offset: Vector2<f32> = Vector2::new(160.0, 160.0);
+    let offset: Vector2<f32> =
+        Vector2::new(flat_hex_width(scale) * 2.0, flat_hex_height(scale) * 1.5);
 
     let mut glyph_brush = GlyphBrushBuilder::using_font(
         FontArc::try_from_slice(include_bytes!("../assets/fonts/Aileron-Regular.otf")).unwrap(),
     )
     .build(&mut surface);
-
-    glyph_brush.queue(
-        Section::default().add_text(
-            Text::new("{3}")
-                .with_color([1.0, 1.0, 1.0, 1.0])
-                .with_scale(24.0),
-        ),
-    );
-
-    glyph_brush.process_queued(&mut surface);
 
     let mut hexes = HashMap::new();
     let mut hex_under_cursor = Vector2::zero();
@@ -93,30 +89,23 @@ fn main() {
                     let hex = pixel_to_flat_hex(relative_pos, scale);
                     hex_under_cursor = hex;
                 }
-                WindowEvent::MouseInput {
-                    button: button @ (MouseButton::Left | MouseButton::Right),
-                    state: ElementState::Pressed,
-                    ..
-                } => {
-                    if hexes.contains_key(&hex_under_cursor) {
+                WindowEvent::KeyboardInput { input, .. } => match input.virtual_keycode {
+                    Some(VirtualKeyCode::Key1) => {
                         hexes.remove(&hex_under_cursor);
-                    } else {
-                        match button {
-                            MouseButton::Left => {
-                                hexes.insert(hex_under_cursor, Hex::Marked { show_around: false });
-                            }
-                            MouseButton::Right => {
-                                hexes.insert(
-                                    hex_under_cursor,
-                                    Hex::Empty {
-                                        show_neighbor_count: true,
-                                    },
-                                );
-                            }
-                            _ => unreachable!(),
-                        }
                     }
-                }
+                    Some(VirtualKeyCode::Key2) => {
+                        hexes.insert(
+                            hex_under_cursor,
+                            Hex::Empty {
+                                show_neighbor_count: true,
+                            },
+                        );
+                    }
+                    Some(VirtualKeyCode::Key3) => {
+                        hexes.insert(hex_under_cursor, Hex::Marked { show_around: false });
+                    }
+                    _ => {}
+                },
                 _ => (),
             },
             Event::MainEventsCleared => {
@@ -125,56 +114,94 @@ fn main() {
             Event::RedrawRequested(_) => {
                 let back_buffer = surface.back_buffer().unwrap();
 
+                let [viewport_width, viewport_height] = surface.size();
+
+                for (pos, hex) in &hexes {
+                    match hex {
+                        Hex::Empty {
+                            show_neighbor_count: true,
+                        } => {
+                            glyph_brush.queue(
+                                Section::default()
+                                    .add_text(
+                                        Text::new("1")
+                                            .with_color([1.0, 1.0, 1.0, 1.0])
+                                            .with_scale(32.0)
+                                            .with_z(-1.0),
+                                    )
+                                    .with_layout(
+                                        Layout::default_single_line()
+                                            .h_align(HorizontalAlign::Center)
+                                            .v_align(VerticalAlign::Center),
+                                    )
+                                    .with_screen_position(
+                                        flat_hex_to_pixel(pos.clone(), scale) + offset,
+                                    ),
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+
+                glyph_brush.process_queued(&mut surface);
+
                 let render = surface
                     .new_pipeline_gate()
                     .pipeline(
                         &back_buffer,
                         &PipelineState::default().set_clear_color([0.1, 0.1, 0.1, 1.0]),
                         |mut pipeline, mut shd_gate| {
-                            let text_transform = projection * Matrix4::from_angle_z(Deg(60.0));
+                            let text_transform = projection;
                             let text_transform_16: &[f32; 16] = text_transform.as_ref();
 
+                            shd_gate
+                                .shade(&mut program, |mut iface, uni, mut rdr_gate| {
+                                    rdr_gate.render(&RenderState::default(), |mut tess_gate| {
+                                        for (position, hex) in &hexes {
+                                            let offset = Vector3::new(offset.x, offset.y, 0.0);
+                                            let relative_position =
+                                                flat_hex_to_pixel(*position, scale);
+
+                                            let translation = Matrix4::from_translation(
+                                                offset + relative_position.extend(0.0),
+                                            );
+
+                                            let scale = Matrix4::from_scale(scale);
+
+                                            let view = projection * translation * scale;
+                                            iface.set(&uni.view, view.into());
+
+                                            let color = hex.get_color(true)
+                                                * (if hex_under_cursor == *position {
+                                                    1.5
+                                                } else {
+                                                    1.0
+                                                });
+
+                                            iface.set(&uni.model_color, color.into());
+
+                                            tess_gate
+                                                .render(&mesh)
+                                                .map_err(|_e: &'static str| ())
+                                                .unwrap();
+                                        }
+
+                                        Ok(())
+                                    })
+                                })
+                                .map_err(|_: &'static str| ())
+                                .unwrap();
+
                             glyph_brush
-                                .draw_queued_with_transform(
+                                .draw_queued(
                                     &mut pipeline,
                                     &mut shd_gate,
-                                    text_transform_16.clone(),
+                                    viewport_width,
+                                    viewport_height,
                                 )
                                 .expect("failed to render glyphs");
 
-                            shd_gate.shade(&mut program, |mut iface, uni, mut rdr_gate| {
-                                rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-                                    for (position, hex) in &hexes {
-                                        let offset = Vector3::new(offset.x, offset.y, 0.0);
-                                        let relative_position = flat_hex_to_pixel(*position, scale);
-
-                                        let translation = Matrix4::from_translation(
-                                            offset + relative_position.extend(0.0),
-                                        );
-
-                                        let scale = Matrix4::from_scale(scale);
-
-                                        let view = projection * translation * scale;
-                                        iface.set(&uni.view, view.into());
-
-                                        let color = hex.get_color(false)
-                                            * (if hex_under_cursor == *position {
-                                                1.5
-                                            } else {
-                                                1.0
-                                            });
-
-                                        iface.set(&uni.model_color, color.into());
-
-                                        tess_gate
-                                            .render(&mesh)
-                                            .map_err(|_e: &'static str| ())
-                                            .unwrap();
-                                    }
-
-                                    Ok(())
-                                })
-                            })
+                            Ok(())
                         },
                     )
                     .assume();

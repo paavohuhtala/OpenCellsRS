@@ -98,3 +98,11 @@ pub fn flat_hex_to_pixel(point: Vector2<i32>, size: f32) -> Vector2<f32> {
     let y = size * (3f32.sqrt() / 2.0 * (point.x as f32) + 3f32.sqrt() * (point.y as f32));
     Vector2::new(x, y)
 }
+
+pub fn flat_hex_height(size: f32) -> f32 {
+    3f32.sqrt() * size
+}
+
+pub fn flat_hex_width(size: f32) -> f32 {
+    size * 2.0
+}
