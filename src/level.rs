@@ -20,3 +20,10 @@ impl Hex {
 pub struct Level {
     pub hexes: HashMap<Vector2<i32>, Hex>,
 }
+
+impl Level {
+    pub fn new() -> Level {
+        let hexes = HashMap::new();
+        Level { hexes }
+    }
+}

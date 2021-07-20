@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use cgmath::{Matrix4, Vector2, Vector3};
+use legion::Resources;
 use luminance::{
     context::GraphicsContext, pipeline::PipelineState, render_state::RenderState, shader::Uniform,
     tess::Interleaved,
@@ -8,11 +7,15 @@ use luminance::{
 use luminance_derive::{Semantics, UniformInterface, Vertex};
 use luminance_front::{shader::Program, tess::Tess, Backend};
 use luminance_glutin::GlutinSurface;
-use luminance_glyph::{ab_glyph::FontArc, GlyphBrush, GlyphBrushBuilder, Section};
+use luminance_glyph::{
+    ab_glyph::FontArc, GlyphBrush, GlyphBrushBuilder, HorizontalAlign, Layout, Section, Text,
+    VerticalAlign,
+};
 
 use crate::{
     hexagon::{create_hexagon_mesh_border, flat_hex_to_pixel},
-    level::Hex,
+    input::InputState,
+    level::{Hex, Level},
 };
 
 #[derive(Copy, Clone, Debug, Semantics)]
@@ -79,18 +82,46 @@ impl Renderer {
 
     pub fn render(
         &mut self,
+        resources: &mut Resources,
         surface: &mut GlutinSurface,
         scale: f32,
-        hexes: &HashMap<Vector2<i32>, Hex>,
         projection: &Matrix4<f32>,
-        hex_under_cursor: Vector2<i32>,
         offset: Vector2<f32>,
     ) {
+        let level = resources.get::<Level>().unwrap();
+        let input_state = resources.get::<InputState>().unwrap();
+        let hex_under_cursor = input_state.hex_position;
+
         let [viewport_width, viewport_height] = surface.size();
 
         let back_buffer = surface.back_buffer().unwrap();
 
         self.glyph_brush.process_queued(surface);
+
+        for (pos, hex) in &level.hexes {
+            match hex {
+                Hex::Empty {
+                    show_neighbor_count: true,
+                } => {
+                    self.queue_text(
+                        Section::default()
+                            .add_text(
+                                Text::new("1")
+                                    .with_color([1.0, 1.0, 1.0, 1.0])
+                                    .with_scale(32.0)
+                                    .with_z(-1.0),
+                            )
+                            .with_layout(
+                                Layout::default_single_line()
+                                    .h_align(HorizontalAlign::Center)
+                                    .v_align(VerticalAlign::Center),
+                            )
+                            .with_screen_position(flat_hex_to_pixel(pos.clone(), scale) + offset),
+                    );
+                }
+                _ => {}
+            }
+        }
 
         let hex_program = &mut self.hex_program;
         let hex_mesh = &self.hex_mesh;
@@ -105,7 +136,7 @@ impl Renderer {
                     shd_gate
                         .shade(hex_program, |mut iface, uni, mut rdr_gate| {
                             rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-                                for (position, hex) in hexes {
+                                for (position, hex) in &level.hexes {
                                     let offset = Vector3::new(offset.x, offset.y, 0.0);
                                     let relative_position = flat_hex_to_pixel(*position, scale);
 

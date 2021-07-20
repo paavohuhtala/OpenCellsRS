@@ -1,10 +1,9 @@
 mod hexagon;
+mod input;
 mod level;
 mod render;
 
-use std::collections::HashMap;
-
-use cgmath::{Matrix4, Ortho, Vector2, Zero};
+use cgmath::{Matrix4, Ortho, Vector2};
 use glutin::{
     self,
     dpi::LogicalSize,
@@ -12,13 +11,14 @@ use glutin::{
     event_loop::ControlFlow,
     window::WindowBuilder,
 };
-use level::Hex;
+use input::{handle_input_system, HexKind, InputAction, InputState};
+use legion::{Resources, Schedule, World};
+use level::Level;
 
 use luminance_glutin::{self, GlutinSurface};
-use luminance_glyph::{HorizontalAlign, Layout, Section, Text, VerticalAlign};
 use render::Renderer;
 
-use crate::hexagon::{flat_hex_height, flat_hex_to_pixel, flat_hex_width, pixel_to_flat_hex};
+use crate::hexagon::{flat_hex_height, flat_hex_width};
 
 fn get_projection_matrix(width: f32, height: f32) -> Matrix4<f32> {
     Matrix4::from(Ortho {
@@ -37,11 +37,19 @@ fn main() {
         .with_inner_size(LogicalSize::new(1600.0, 900.0));
     let (mut surface, event_loop) = GlutinSurface::new_gl33(window_builder, 8).unwrap();
 
+    let level = Level::new();
+
+    let mut world = World::default();
+    let mut resources = Resources::default();
+    resources.insert(level);
+    resources.insert(InputState::default());
+
+    let mut schedule = Schedule::builder()
+        .add_system(handle_input_system())
+        .build();
+
     let mut projection = get_projection_matrix(1600.0, 900.0);
     let scale = 64.0;
-
-    let mut hexes = HashMap::new();
-    let mut hex_under_cursor = Vector2::zero();
 
     let mut renderer = Renderer::new(&mut surface);
 
@@ -64,68 +72,38 @@ fn main() {
                 }
                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                 WindowEvent::CursorMoved { position, .. } => {
-                    let relative_pos = Vector2::new(position.x as f32, position.y as f32) - offset;
-                    let hex = pixel_to_flat_hex(relative_pos, scale);
-                    hex_under_cursor = hex;
+                    let mut input_state = resources.get_mut::<InputState>().unwrap();
+                    input_state.mouse_position =
+                        Vector2::new(position.x as f32, position.y as f32) - offset;
                 }
-                WindowEvent::KeyboardInput { input, .. } => match input.virtual_keycode {
-                    Some(VirtualKeyCode::Key1) => {
-                        hexes.remove(&hex_under_cursor);
-                    }
-                    Some(VirtualKeyCode::Key2) => {
-                        hexes.insert(
-                            hex_under_cursor,
-                            Hex::Empty {
-                                show_neighbor_count: true,
-                            },
-                        );
-                    }
-                    Some(VirtualKeyCode::Key3) => {
-                        hexes.insert(hex_under_cursor, Hex::Marked { show_around: false });
-                    }
-                    _ => {}
-                },
-                _ => (),
-            },
-            Event::MainEventsCleared => {
-                surface.ctx.window().request_redraw();
-            }
-            Event::RedrawRequested(_) => {
-                for (pos, hex) in &hexes {
-                    match hex {
-                        Hex::Empty {
-                            show_neighbor_count: true,
-                        } => {
-                            renderer.queue_text(
-                                Section::default()
-                                    .add_text(
-                                        Text::new("1")
-                                            .with_color([1.0, 1.0, 1.0, 1.0])
-                                            .with_scale(32.0)
-                                            .with_z(-1.0),
-                                    )
-                                    .with_layout(
-                                        Layout::default_single_line()
-                                            .h_align(HorizontalAlign::Center)
-                                            .v_align(VerticalAlign::Center),
-                                    )
-                                    .with_screen_position(
-                                        flat_hex_to_pixel(pos.clone(), scale) + offset,
-                                    ),
-                            );
+                WindowEvent::KeyboardInput { input, .. } => {
+                    let mut input_state = resources.get_mut::<InputState>().unwrap();
+
+                    match input.virtual_keycode {
+                        Some(VirtualKeyCode::Key1) => {
+                            input_state.action_queue.push(InputAction::ClearHex);
+                        }
+                        Some(VirtualKeyCode::Key2) => {
+                            input_state
+                                .action_queue
+                                .push(InputAction::PlaceHex(HexKind::Empty));
+                        }
+                        Some(VirtualKeyCode::Key3) => {
+                            input_state
+                                .action_queue
+                                .push(InputAction::PlaceHex(HexKind::Marked));
                         }
                         _ => {}
                     }
                 }
-
-                renderer.render(
-                    &mut surface,
-                    scale,
-                    &hexes,
-                    &projection,
-                    hex_under_cursor,
-                    offset,
-                );
+                _ => (),
+            },
+            Event::MainEventsCleared => {
+                surface.ctx.window().request_redraw();
+                schedule.execute(&mut world, &mut resources);
+            }
+            Event::RedrawRequested(_) => {
+                renderer.render(&mut resources, &mut surface, scale, &projection, offset);
             }
             _ => (),
         }
