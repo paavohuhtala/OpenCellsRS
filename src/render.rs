@@ -1,5 +1,4 @@
 use cgmath::{Matrix4, Vector2, Vector3};
-use legion::Resources;
 use luminance::{
     context::GraphicsContext, pipeline::PipelineState, render_state::RenderState, shader::Uniform,
     tess::Interleaved,
@@ -14,8 +13,8 @@ use luminance_glyph::{
 
 use crate::{
     hexagon::{create_hexagon_mesh_border, flat_hex_to_pixel},
-    input::InputState,
-    level::{Hex, Level},
+    level::Hex,
+    update::GameState,
 };
 
 #[derive(Copy, Clone, Debug, Semantics)]
@@ -82,31 +81,39 @@ impl Renderer {
 
     pub fn render(
         &mut self,
-        resources: &mut Resources,
+        state: &GameState,
         surface: &mut GlutinSurface,
         scale: f32,
         projection: &Matrix4<f32>,
         offset: Vector2<f32>,
     ) {
-        let level = resources.get::<Level>().unwrap();
-        let input_state = resources.get::<InputState>().unwrap();
-        let hex_under_cursor = input_state.hex_position;
+        let level = &state.level;
+        let hex_under_cursor = state.cursor_hex_position;
 
         let [viewport_width, viewport_height] = surface.size();
 
         let back_buffer = surface.back_buffer().unwrap();
 
-        self.glyph_brush.process_queued(surface);
+        self.queue_text(
+            Section::default()
+                .add_text(
+                    Text::new("Mistakes: 0")
+                        .with_color([1.0, 1.0, 1.0, 1.0])
+                        .with_scale(48f32)
+                        .with_z(-1.0),
+                )
+                .with_screen_position((viewport_width as f32 - 250.0, 100.0)),
+        );
 
-        for (pos, hex) in &level.hexes {
-            match hex {
+        for (pos, cell) in &level.cells {
+            match &cell.hex {
                 Hex::Empty {
                     show_neighbor_count: true,
                 } => {
                     self.queue_text(
                         Section::default()
                             .add_text(
-                                Text::new("1")
+                                Text::new(cell.neighbors_str())
                                     .with_color([1.0, 1.0, 1.0, 1.0])
                                     .with_scale(32.0)
                                     .with_z(-1.0),
@@ -123,6 +130,8 @@ impl Renderer {
             }
         }
 
+        self.glyph_brush.process_queued(surface);
+
         let hex_program = &mut self.hex_program;
         let hex_mesh = &self.hex_mesh;
         let glyph_brush = &mut self.glyph_brush;
@@ -136,7 +145,7 @@ impl Renderer {
                     shd_gate
                         .shade(hex_program, |mut iface, uni, mut rdr_gate| {
                             rdr_gate.render(&RenderState::default(), |mut tess_gate| {
-                                for (position, hex) in &level.hexes {
+                                for (position, cell) in &level.cells {
                                     let offset = Vector3::new(offset.x, offset.y, 0.0);
                                     let relative_position = flat_hex_to_pixel(*position, scale);
 
@@ -149,7 +158,7 @@ impl Renderer {
                                     let view = projection * translation * scale;
                                     iface.set(&uni.view, view.into());
 
-                                    let color = hex.get_color(true)
+                                    let color = cell.hex.get_color(true)
                                         * (if hex_under_cursor == *position {
                                             1.5
                                         } else {

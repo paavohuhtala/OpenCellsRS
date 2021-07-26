@@ -4,6 +4,11 @@ use luminance_front::{tess::Tess, Backend};
 
 use crate::render::{HexVertex, HexVertexIndex, VertexEdginess, VertexPosition};
 
+pub type Axial = Vector2<i32>;
+pub type AxialF = Vector2<f32>;
+pub type Cube = Vector3<i32>;
+pub type CubeF = Vector3<f32>;
+
 pub fn create_hexagon_mesh_border<C>(
     context: &mut C,
 ) -> Tess<HexVertex, HexVertexIndex, (), Interleaved>
@@ -62,7 +67,7 @@ pub fn axial_to_cube<N: Signed + Copy>(hex: Vector2<N>) -> Vector3<N> {
     Vector3::new(x, y, z)
 }
 
-pub fn cube_round(f_cube: Vector3<f32>) -> Vector3<i32> {
+pub fn cube_round(f_cube: CubeF) -> Cube {
     let mut rx = f_cube.x.round();
     let mut ry = f_cube.y.round();
     let mut rz = f_cube.z.round();
@@ -82,7 +87,7 @@ pub fn cube_round(f_cube: Vector3<f32>) -> Vector3<i32> {
     Vector3::new(rx as i32, ry as i32, rz as i32)
 }
 
-pub fn hex_round(f_hex: Vector2<f32>) -> Vector2<i32> {
+pub fn hex_round(f_hex: AxialF) -> Axial {
     cube_to_axial(cube_round(axial_to_cube(f_hex)))
 }
 
@@ -105,4 +110,34 @@ pub fn flat_hex_height(size: f32) -> f32 {
 
 pub fn flat_hex_width(size: f32) -> f32 {
     size * 2.0
+}
+
+pub const CUBE_DIRECTIONS: [Cube; 6] = [
+    Cube::new(1, -1, 0),
+    Cube::new(1, 0, -1),
+    Cube::new(0, 1, -1),
+    Cube::new(-1, 1, 0),
+    Cube::new(-1, 0, 1),
+    Cube::new(0, -1, 1),
+];
+
+fn cube_neighbor(cube: Cube, direction: usize) -> Cube {
+    cube + CUBE_DIRECTIONS[direction]
+}
+
+pub fn cube_ring(center: Cube, radius: u32, results: &mut Vec<Cube>) {
+    let mut cube = center + CUBE_DIRECTIONS[4] * (radius as i32);
+
+    for i in 0..6 {
+        for _ in 0..radius {
+            results.push(cube);
+            cube = cube_neighbor(cube, i);
+        }
+    }
+}
+
+pub fn spiral_ring(center: Cube, radius: u32, results: &mut Vec<Cube>) {
+    for i in 1..=radius {
+        cube_ring(center, i, results);
+    }
 }

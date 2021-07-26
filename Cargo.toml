@@ -6,7 +6,6 @@ edition = "2018"
 [dependencies]
 cgmath = "0.18.0"
 glutin = "0.27.0"
-legion = "0.4.0"
 luminance = "0.44.0"
 luminance-derive = "0.7.0"
 luminance-front = "0.4.0"

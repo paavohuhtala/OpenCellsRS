@@ -1,6 +1,6 @@
 # OpenCells
 
-An open source ambient logic hexagon game, based on the excellent [Hexcells](https://store.steampowered.com/app/265890/Hexcells/) series of games. Written in Rust using `luminance` and `legion`.
+An open source ambient logic hexagon game, based on the excellent [Hexcells](https://store.steampowered.com/app/265890/Hexcells/) series of games. Written in Rust using `luminance`.
 
 ## Ideas for stuff
 
