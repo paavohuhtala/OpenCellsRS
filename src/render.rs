@@ -1,4 +1,4 @@
-use cgmath::{Matrix4, Vector2, Vector3};
+use cgmath::{Matrix4, Ortho, Vector3};
 use luminance::{
     context::GraphicsContext, pipeline::PipelineState, render_state::RenderState, shader::Uniform,
     tess::Interleaved,
@@ -51,6 +51,8 @@ pub struct Renderer {
     hex_program: Program<HexVertexSemantics, (), HexInterface>,
     hex_mesh: Tess<HexVertex, HexVertexIndex, (), Interleaved>,
     glyph_brush: GlyphBrush<Backend>,
+
+    projection_matrix: Matrix4<f32>,
 }
 
 impl Renderer {
@@ -68,27 +70,40 @@ impl Renderer {
         )
         .build(surface);
 
+        let [width, height] = surface.size();
+
         Renderer {
             hex_program: program,
             hex_mesh,
             glyph_brush,
+            projection_matrix: Self::get_projection_matrix(width, height),
         }
+    }
+
+    fn get_projection_matrix(width: u32, height: u32) -> Matrix4<f32> {
+        Matrix4::from(Ortho {
+            left: 0.0,
+            right: width as f32,
+            bottom: height as f32,
+            top: 0.0,
+            near: -2.0,
+            far: 100.0,
+        })
+    }
+
+    pub fn update_resolution(&mut self, width: u32, height: u32) {
+        self.projection_matrix = Self::get_projection_matrix(width, height);
     }
 
     pub fn queue_text(&mut self, section: Section) {
         self.glyph_brush.queue(section);
     }
 
-    pub fn render(
-        &mut self,
-        state: &GameState,
-        surface: &mut GlutinSurface,
-        scale: f32,
-        projection: &Matrix4<f32>,
-        offset: Vector2<f32>,
-    ) {
+    pub fn render(&mut self, state: &GameState, surface: &mut GlutinSurface) {
         let level = &state.level;
         let hex_under_cursor = state.cursor_hex_position;
+        let offset = state.offset;
+        let scale = state.scale;
 
         let [viewport_width, viewport_height] = surface.size();
 
@@ -103,6 +118,22 @@ impl Renderer {
                         .with_z(-1.0),
                 )
                 .with_screen_position((viewport_width as f32 - 250.0, 100.0)),
+        );
+
+        self.queue_text(
+            Section::default()
+                .add_text(
+                    Text::new("=")
+                        .with_color([0.0, 0.0, 1.0, 1.0])
+                        .with_scale(48f32)
+                        .with_z(-1.0),
+                )
+                .with_layout(
+                    Layout::default_single_line()
+                        .h_align(HorizontalAlign::Center)
+                        .v_align(VerticalAlign::Center),
+                )
+                .with_screen_position(state.nearest_edge + offset),
         );
 
         for (pos, cell) in &level.cells {
@@ -135,6 +166,7 @@ impl Renderer {
         let hex_program = &mut self.hex_program;
         let hex_mesh = &self.hex_mesh;
         let glyph_brush = &mut self.glyph_brush;
+        let projection = &self.projection_matrix;
 
         let render = surface
             .new_pipeline_gate()

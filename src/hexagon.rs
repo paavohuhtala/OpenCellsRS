@@ -1,4 +1,4 @@
-use cgmath::{num_traits::Signed, Vector2, Vector3};
+use cgmath::{num_traits::Signed, EuclideanSpace, MetricSpace, Point2, Vector2, Vector3};
 use luminance::{context::GraphicsContext, tess::Interleaved};
 use luminance_front::{tess::Tess, Backend};
 
@@ -91,14 +91,17 @@ pub fn hex_round(f_hex: AxialF) -> Axial {
     cube_to_axial(cube_round(axial_to_cube(f_hex)))
 }
 
-pub fn pixel_to_flat_hex(point: Vector2<f32>, size: f32) -> Vector2<i32> {
-    let x = (2.0 / 3.0 * point.x) / size;
-    let y = (-1.0 / 3.0 * point.x + 3.0f32.sqrt() / 3.0 * point.y) / size;
-
-    hex_round(Vector2::new(x, y))
+pub fn pixel_to_flat_hex(point: Vector2<f32>, size: f32) -> Axial {
+    hex_round(pixel_to_flat_hex_f(point, size))
 }
 
-pub fn flat_hex_to_pixel(point: Vector2<i32>, size: f32) -> Vector2<f32> {
+pub fn pixel_to_flat_hex_f(point: Vector2<f32>, size: f32) -> AxialF {
+    let x = (2.0 / 3.0 * point.x) / size;
+    let y = (-1.0 / 3.0 * point.x + 3.0f32.sqrt() / 3.0 * point.y) / size;
+    Vector2::new(x, y)
+}
+
+pub fn flat_hex_to_pixel(point: Axial, size: f32) -> Vector2<f32> {
     let x = size * (3.0 / 2.0 * point.x as f32);
     let y = size * (3f32.sqrt() / 2.0 * (point.x as f32) + 3f32.sqrt() * (point.y as f32));
     Vector2::new(x, y)
@@ -121,6 +124,16 @@ pub const CUBE_DIRECTIONS: [Cube; 6] = [
     Cube::new(0, -1, 1),
 ];
 
+#[allow(dead_code)]
+pub const AXIAL_DIRECTION: [Axial; 6] = [
+    Axial::new(1, 0),
+    Axial::new(1, -1),
+    Axial::new(0, -1),
+    Axial::new(-1, 0),
+    Axial::new(-1, 1),
+    Axial::new(0, 1),
+];
+
 fn cube_neighbor(cube: Cube, direction: usize) -> Cube {
     cube + CUBE_DIRECTIONS[direction]
 }
@@ -140,4 +153,36 @@ pub fn spiral_ring(center: Cube, radius: u32, results: &mut Vec<Cube>) {
     for i in 1..=radius {
         cube_ring(center, i, results);
     }
+}
+
+pub fn nearest_edge_hex(pixel_pos: Vector2<f32>, scale: f32) -> Vector2<f32> {
+    let axial_f = pixel_to_flat_hex_f(pixel_pos, scale);
+    let axial = hex_round(axial_f);
+    let pixel_center = flat_hex_to_pixel(axial, scale);
+
+    let cube_f = axial_to_cube(axial_f);
+    let cube = axial_to_cube(axial);
+
+    let mut nearest_neighbor = None;
+    let mut smallest_distance = f32::MAX;
+
+    for dir in &CUBE_DIRECTIONS {
+        let neighbor_cube = cube + dir;
+        let neighbor_cube_f = neighbor_cube.cast::<f32>().unwrap();
+
+        let distance = cube_f.distance2(neighbor_cube_f);
+
+        if distance < smallest_distance {
+            nearest_neighbor = Some(neighbor_cube);
+            smallest_distance = distance;
+        }
+    }
+
+    let nearest = nearest_neighbor.unwrap();
+    let nearest_axial = cube_to_axial(nearest);
+    let nearest_pixel = flat_hex_to_pixel(nearest_axial, scale);
+
+    Point2::from_vec(pixel_center)
+        .midpoint(Point2::from_vec(nearest_pixel))
+        .to_vec()
 }

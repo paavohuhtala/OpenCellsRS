@@ -1,28 +1,48 @@
 use cgmath::{Vector2, Zero};
 
 use crate::{
-    hexagon::{axial_to_cube, cube_to_axial, pixel_to_flat_hex, spiral_ring, CUBE_DIRECTIONS},
+    hexagon::{
+        axial_to_cube, cube_to_axial, flat_hex_height, flat_hex_width, nearest_edge_hex,
+        pixel_to_flat_hex, spiral_ring, CUBE_DIRECTIONS,
+    },
     input::{HexKind, InputAction, InputState},
     level::{CellState, Hex, Level},
 };
 
 pub struct GameState {
     pub level: Level,
+
+    pub scale: f32,
+    pub offset: Vector2<f32>,
+
+    pub nearest_edge: Vector2<f32>,
     pub cursor_hex_position: Vector2<i32>,
 }
 
 impl GameState {
     pub fn new() -> Self {
+        let scale = 64.0;
+
+        let offset = Vector2::new(flat_hex_width(scale) * 2.0, flat_hex_height(scale) * 1.5);
+
         GameState {
             level: Level::new(),
+            scale,
+            offset,
             cursor_hex_position: Vector2::zero(),
+            nearest_edge: Vector2::zero(),
         }
     }
 }
 
 fn handle_input(state: &mut GameState, input_state: &mut InputState) {
+    input_state.mouse_position = input_state.absolute_mouse_position - state.offset;
+
     // TODO: make scale configurable
     state.cursor_hex_position = pixel_to_flat_hex(input_state.mouse_position, 64.0);
+
+    let nearest_edge = nearest_edge_hex(input_state.mouse_position, 64.0);
+    state.nearest_edge = nearest_edge;
 
     let mut invalidated = false;
 
