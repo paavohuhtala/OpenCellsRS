@@ -38,10 +38,9 @@ impl GameState {
 fn handle_input(state: &mut GameState, input_state: &mut InputState) {
     input_state.mouse_position = input_state.absolute_mouse_position - state.offset;
 
-    // TODO: make scale configurable
-    state.cursor_hex_position = pixel_to_flat_hex(input_state.mouse_position, 64.0);
+    state.cursor_hex_position = pixel_to_flat_hex(input_state.mouse_position, state.scale);
 
-    let nearest_edge = nearest_edge_hex(input_state.mouse_position, 64.0);
+    let nearest_edge = nearest_edge_hex(input_state.mouse_position, state.scale);
     state.nearest_edge = nearest_edge;
 
     let mut invalidated = false;
