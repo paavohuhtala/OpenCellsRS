@@ -1,8 +1,8 @@
+mod game;
 mod hexagon;
 mod input;
 mod level;
 mod render;
-mod update;
 
 use cgmath::Vector2;
 use glutin::{
@@ -14,9 +14,9 @@ use glutin::{
 };
 use input::{HexKind, InputAction, InputState};
 
+use game::{update, GameState};
 use luminance_glutin::{self, GlutinSurface};
 use render::Renderer;
-use update::{update_state, GameState};
 
 fn handle_window_event(
     event: WindowEvent,
@@ -88,7 +88,7 @@ fn main() {
                 }
             }
             Event::MainEventsCleared => {
-                update_state(&mut game_state, &mut input_state);
+                update(&mut game_state, &mut input_state);
                 surface.ctx.window().request_redraw();
             }
             Event::RedrawRequested(_) => {

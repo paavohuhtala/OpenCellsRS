@@ -89,7 +89,7 @@ fn handle_input(state: &mut GameState, input_state: &mut InputState) {
     }
 }
 
-pub fn update_state(state: &mut GameState, input_state: &mut InputState) {
+pub fn update(state: &mut GameState, input_state: &mut InputState) {
     handle_input(state, input_state);
 }
 

@@ -12,9 +12,9 @@ use luminance_glyph::{
 };
 
 use crate::{
+    game::GameState,
     hexagon::{create_hexagon_mesh_border, flat_hex_to_pixel},
     level::Hex,
-    update::GameState,
 };
 
 #[derive(Copy, Clone, Debug, Semantics)]
@@ -120,21 +120,7 @@ impl Renderer {
                 .with_screen_position((viewport_width as f32 - 250.0, 100.0)),
         );
 
-        self.queue_text(
-            Section::default()
-                .add_text(
-                    Text::new("=")
-                        .with_color([0.0, 0.0, 1.0, 1.0])
-                        .with_scale(48f32)
-                        .with_z(-1.0),
-                )
-                .with_layout(
-                    Layout::default_single_line()
-                        .h_align(HorizontalAlign::Center)
-                        .v_align(VerticalAlign::Center),
-                )
-                .with_screen_position(state.nearest_edge + offset),
-        );
+        self.render_diagonal_hover(state, offset);
 
         for (pos, cell) in &level.cells {
             match &cell.hex {
@@ -227,5 +213,23 @@ impl Renderer {
         if render.is_ok() {
             surface.swap_buffers();
         }
+    }
+
+    fn render_diagonal_hover(&mut self, state: &GameState, offset: cgmath::Vector2<f32>) {
+        self.queue_text(
+            Section::default()
+                .add_text(
+                    Text::new("=")
+                        .with_color([0.0, 0.0, 1.0, 1.0])
+                        .with_scale(48f32)
+                        .with_z(-1.0),
+                )
+                .with_layout(
+                    Layout::default_single_line()
+                        .h_align(HorizontalAlign::Center)
+                        .v_align(VerticalAlign::Center),
+                )
+                .with_screen_position(state.nearest_edge + offset),
+        );
     }
 }
