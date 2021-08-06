@@ -721,7 +721,7 @@ dependencies = [
 [[package]]
 name = "luminance-glyph"
 version = "0.2.0"
-source = "git+https://github.com/paavohuhtala/luminance-glyph?branch=luminance-0.44#b5e41ce8e09e96656887dfdee1a8b3c6488ca0cd"
+source = "git+https://github.com/JohnDoneth/luminance-glyph#6c04a5dc232b7e983ec7bbc0e3f83808cac879fa"
 dependencies = [
  "glyph_brush",
  "log",
