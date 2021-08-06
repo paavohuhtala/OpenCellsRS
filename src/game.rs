@@ -21,7 +21,7 @@ pub struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
-        let scale = 64.0;
+        let scale = 48.0;
 
         let offset = Vector2::new(flat_hex_width(scale) * 2.0, flat_hex_height(scale) * 1.5);
 
@@ -80,6 +80,12 @@ fn handle_input(state: &mut GameState, input_state: &mut InputState) {
                 }
 
                 invalidated = true;
+            }
+            InputAction::ToggleRevealed => {
+                let cell = state.level.cells.get_mut(&state.cursor_hex_position);
+                if let Some(cell) = cell {
+                    cell.start_revealed = !cell.start_revealed;
+                }
             }
         }
     }

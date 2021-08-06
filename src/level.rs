@@ -6,6 +6,7 @@ use cgmath::{Vector2, Vector3};
 
 use crate::hexagon::Axial;
 
+#[derive(Debug)]
 pub enum Hex {
     Empty { show_neighbor_count: bool },
     Marked { show_around: bool },
@@ -21,8 +22,10 @@ impl Hex {
     }
 }
 
+#[derive(Debug)]
 pub struct CellState {
     pub hex: Hex,
+    pub start_revealed: bool,
     revealed: MemoryCell<bool>,
     marked_neighbors: MemoryCell<usize>,
 }
@@ -31,6 +34,7 @@ impl CellState {
     pub fn new(hex: Hex) -> Self {
         CellState {
             hex,
+            start_revealed: false,
             revealed: MemoryCell::new(false),
             marked_neighbors: MemoryCell::new(0),
         }

@@ -1,40 +1,39 @@
-use cgmath::{num_traits::Signed, EuclideanSpace, MetricSpace, Point2, Vector2, Vector3};
-use luminance::{context::GraphicsContext, tess::Interleaved};
+use cgmath::{num_traits::Signed, EuclideanSpace, MetricSpace, Point2, Vector2, Vector3, Zero};
+use luminance::{context::GraphicsContext, tess::Interleaved, vertex::Vertex};
 use luminance_front::{tess::Tess, Backend};
 
-use crate::render::{HexVertex, HexVertexIndex, VertexEdginess, VertexPosition};
+use crate::render::{
+    BasicVertex, BasicVertexPosition, HexVertex, HexVertexEdginess, HexVertexPosition,
+    SmallVertexIndex,
+};
 
 pub type Axial = Vector2<i32>;
 pub type AxialF = Vector2<f32>;
 pub type Cube = Vector3<i32>;
 pub type CubeF = Vector3<f32>;
 
-pub fn create_hexagon_mesh_border<C>(
+fn create_mesh<C, V: Vertex>(
     context: &mut C,
-) -> Tess<HexVertex, HexVertexIndex, (), Interleaved>
+    create_vertex: impl Fn(Vector2<f32>, bool) -> V,
+) -> Tess<V, SmallVertexIndex, (), Interleaved>
 where
+    V: Vertex,
     C: GraphicsContext<Backend = Backend>,
 {
     let mut verts = Vec::with_capacity(7);
 
-    verts.push(HexVertex {
-        position: VertexPosition::new(Vector2::new(0.0, 0.0).into()),
-        edginess: VertexEdginess::new(0.0),
-    });
+    verts.push(create_vertex(Vector2::zero(), true));
 
     for i in 0..6 {
         let outer_position = hex_corner(Vector2::new(0.0, 0.0), 0.95, i);
-        let vert = HexVertex {
-            position: VertexPosition::new(outer_position.into()),
-            edginess: VertexEdginess::new(1.0),
-        };
+        let vert = create_vertex(outer_position.into(), false);
         verts.push(vert);
     }
 
     #[rustfmt::skip]
-    let indices: &[HexVertexIndex] = &[
-        0, 1, 2, 3, 4, 5, 6, 1
-    ];
+        let indices: &[SmallVertexIndex] = &[
+            0, 1, 2, 3, 4, 5, 6, 1
+        ];
 
     context
         .new_tess()
@@ -43,6 +42,30 @@ where
         .set_mode(luminance::tess::Mode::TriangleFan)
         .build()
         .unwrap()
+}
+
+pub fn create_hexagon_mesh_border<C>(
+    context: &mut C,
+) -> Tess<HexVertex, SmallVertexIndex, (), Interleaved>
+where
+    C: GraphicsContext<Backend = Backend>,
+{
+    create_mesh(context, |position, is_center| HexVertex {
+        position: HexVertexPosition::new(position.into()),
+        edginess: HexVertexEdginess::new(if is_center { 0.0 } else { 1.0 }),
+    })
+}
+
+#[allow(dead_code)]
+pub fn create_hexagon_mesh<C>(
+    context: &mut C,
+) -> Tess<BasicVertex, SmallVertexIndex, (), Interleaved>
+where
+    C: GraphicsContext<Backend = Backend>,
+{
+    create_mesh(context, |position, _is_center| BasicVertex {
+        position: BasicVertexPosition::new(position.into()),
+    })
 }
 
 // https://www.redblobgames.com/grids/hexagons/

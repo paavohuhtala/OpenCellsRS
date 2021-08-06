@@ -8,7 +8,7 @@ use cgmath::Vector2;
 use glutin::{
     self,
     dpi::LogicalSize,
-    event::{Event, StartCause, VirtualKeyCode, WindowEvent},
+    event::{ElementState, Event, StartCause, VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
     window::WindowBuilder,
 };
@@ -55,6 +55,10 @@ fn handle_window_event(
             }
             Some(VirtualKeyCode::F2) => {
                 input_state.action_queue.push(InputAction::RingDebug);
+                None
+            }
+            Some(VirtualKeyCode::R) if input.state == ElementState::Pressed => {
+                input_state.action_queue.push(InputAction::ToggleRevealed);
                 None
             }
             _ => None,

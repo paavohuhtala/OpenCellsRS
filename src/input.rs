@@ -11,6 +11,7 @@ pub enum InputAction {
     ClearHex,
     PlaceHex(HexKind),
     RingDebug,
+    ToggleRevealed,
 }
 
 pub struct InputState {
